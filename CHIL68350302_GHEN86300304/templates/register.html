@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Enregistrement</title>
+</head>
+<body>
+    <h1>Enregistrement</h1>
+    <form action="{{ url_for('inscription') }}" method="post">
+        <label for="nom">Nom:</label>
+        <input type="text" id="nom" name="nom" required><br><br>
+
+        <label for="courriel">Courriel:</label>
+        <input type="email" id="courriel" name="courriel" required><br><br>
+
+        <label for="mot_de_passe">Mot de passe:</label>
+        <input type="password" id="mot_de_passe" name="mot_de_passe" required><br><br>
+
+        <label for="mot_de_passe_confirm">Confirmer le mot de passe:</label>
+        <input type="password" id="mot_de_passe_confirm" name="mot_de_passe_confirm" required><br><br>
+
+        <button type="submit">S'enregistrer</button>
+    </form>
+    {% if error %}
+        <p style="color: red;">{{ error }}</p>
+    {% endif %}
+</body>
+</html>
