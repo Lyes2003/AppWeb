@@ -29,7 +29,7 @@ app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'change_me_secure_key')
 # Configuration des cookies de session pour la sécurité
 app.config['REMEMBER_COOKIE_NAME'] = 'my_flask_app_remember' # Nom du cookie "se souvenir de moi"
 app.config['REMEMBER_COOKIE_DURATION'] = timedelta(days=15) # Durée de vie du cookie "se souvenir de moi"
-app.config['SESSION_COOKIE_SECURE'] = True # Utiliser True en production avec HTTPS
+app.config['SESSION_COOKIE_SECURE'] = False # Utiliser True en production avec HTTPS
 app.config['SESSION_COOKIE_HTTPONLY'] = True # Empêche l'accès JavaScript au cookie
 app.config['SESSION_COOKIE_SAMESITE'] = 'Lax' # Protège contre les attaques CSRF
 
@@ -74,6 +74,7 @@ def page_acceuil():
     return render_template('index.html')
 
 # Route pour la page d'inscription
+# retourne à la page d'accueil après une inscription réussie, sinon reste sur la page d'inscription avec un message d'erreur
 @app.route('/inscription', methods=['GET', 'POST'])
 def inscription():
     if request.method == 'GET':
@@ -97,6 +98,7 @@ def inscription():
         return redirect(url_for('page_acceuil'))
 
 # Route pour la page de connexion
+# retourne à la page d'accueil après une connexion réussie, sinon reste sur la page de connexion avec un message d'erreur
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'GET':
@@ -120,6 +122,7 @@ def login():
             return render_template('login.html', error="Courriel ou mot de passe incorrect.")
 
 # Route pour la déconnexion
+# retourne à la page d'accueil après la déconnexion
 @app.route('/logout')
 @login_required
 def logout():
@@ -128,17 +131,26 @@ def logout():
     return redirect(url_for('page_acceuil'))
 
 # Route pour une page protégée
+# retourne un message avec le nom de l'utilisateur connecté
 @app.route('/protected')
 @login_required
 def protected():
     return f"Bonjour {current_user.nom} — page protégée"
 
 # Fonction pour vérifier si une URL est sûre
+# retourne True si l'URL est sûre, False sinon
 def is_safe_url(target):
+    if not target:
+        return False
     host_url = request.host_url # Obtenir l'URL de l'hôte
     ref_url = urlparse(host_url) # Analyser l'URL de l'hôte
     test_url = urlparse(urljoin(host_url, target)) # Joindre l'URL de l'hôte avec la cible 
     return test_url.scheme in ('http', 'https') and ref_url.netloc == urlparse(test_url).netloc # Vérifier que le netloc correspond
+
+@app.route('/dashboard')
+@login_required
+def dashboard():
+    return render_template('dashboard.html', nom=current_user.nom)
 
 if __name__ == '__main__':
     app.run(debug=True)
