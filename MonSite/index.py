@@ -20,11 +20,16 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from flask_login import LoginManager, UserMixin, login_user, logout_user, login_required, current_user
 from datetime import timedelta
 from urllib.parse import urlparse, urljoin
+from flask_wtf import CSRFProtect   # import: active CSRF via Flask-WTF
+from forms import LoginForm, RegisterForm
+from flask_wtf.csrf import CSRFError
+
 
 app = Flask(__name__, static_url_path="", static_folder="static")
 
 # Configuration de l'application Flask
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'change_me_secure_key')
+csrf = CSRFProtect(app)  # active la protection CSRF pour l'application
 
 # Configuration des cookies de session pour la sécurité
 app.config['REMEMBER_COOKIE_NAME'] = 'my_flask_app_remember' # Nom du cookie "se souvenir de moi"
@@ -73,55 +78,7 @@ def close_connection(exception):
 def page_acceuil():
     return render_template('index.html')
 
-# Route pour la page d'inscription
-# retourne à la page d'accueil après une inscription réussie, sinon reste sur la page d'inscription avec un message d'erreur
-@app.route('/inscription', methods=['GET', 'POST'])
-def inscription():
-    if request.method == 'GET':
-        return render_template('register.html')
-    else:
-        nom = request.form['nom'].strip()
-        courriel = request.form['courriel'].strip()
-        mot_de_passe = request.form['mot_de_passe'].strip()
-        mot_de_passe_confirm = request.form['mot_de_passe_confirm'].strip()
-        # Vérifier si les mots de passe correspondent
-        if mot_de_passe != mot_de_passe_confirm:
-            return render_template('register.html', error="Les mots de passe ne correspondent pas.")
-        # Vérifier si un utilisateur avec le même courriel existe déjà
-        db = get_db()
-        existing = db.get_utilisateur_par_courriel(courriel)
-        if existing:
-            return render_template('register.html', error="Un compte existe déjà pour ce courriel.")
-        hashed = generate_password_hash(mot_de_passe)
-        # Insérer le nouvel utilisateur dans la base de données
-        id = db.insert_utilisateur(nom, courriel, hashed)
-        return redirect(url_for('page_acceuil'))
 
-# Route pour la page de connexion
-# retourne à la page d'accueil après une connexion réussie, sinon reste sur la page de connexion avec un message d'erreur
-@app.route('/login', methods=['GET', 'POST'])
-def login():
-    if request.method == 'GET':
-        return render_template('login.html')
-    else:
-        courriel = request.form['courriel'].strip()
-        mot_de_passe = request.form['mot_de_passe'].strip()
-        db = get_db()
-        utilisateur = db.get_utilisateur_par_courriel(courriel)
-        # Vérifier si l'utilisateur existe et si le mot de passe est correct
-        if utilisateur and check_password_hash(utilisateur['mot_de_passe'], mot_de_passe):
-            user_obj = User(utilisateur['id_utilisateur'], utilisateur['nom'], utilisateur['courriel'])
-            # Connecter l'utilisateur et gérer la session 
-            login_user(user_obj, remember='remember' in request.form)
-            # Rediriger vers la page suivante ou la page d'accueil
-            next_page = request.args.get('next')
-            if next_page and is_safe_url(next_page):
-                return redirect(next_page)
-            return redirect(url_for('page_acceuil'))
-        else:
-            return render_template('login.html', error="Courriel ou mot de passe incorrect.")
-
-# Route pour la déconnexion
 # retourne à la page d'accueil après la déconnexion
 @app.route('/logout')
 @login_required
@@ -145,12 +102,129 @@ def is_safe_url(target):
     host_url = request.host_url # Obtenir l'URL de l'hôte
     ref_url = urlparse(host_url) # Analyser l'URL de l'hôte
     test_url = urlparse(urljoin(host_url, target)) # Joindre l'URL de l'hôte avec la cible 
-    return test_url.scheme in ('http', 'https') and ref_url.netloc == urlparse(test_url).netloc # Vérifier que le netloc correspond
+    return test_url.scheme in ('http', 'https') and ref_url.netloc == test_url.netloc # Vérifier que le netloc correspond
 
+# --- Validation utilities ---
+EMAIL_REGEX = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
+NAME_REGEX = re.compile(r"^[A-Za-zÀ-ÖØ-öø-ÿ' \-]{2,100}$")
+
+
+def is_valid_email(email: str) -> bool:
+    #Retourne True si le courriel a un format plausible.
+    if not email:
+        return False
+    return bool(EMAIL_REGEX.match(email))
+
+
+def is_valid_name(name: str) -> bool:
+    #Retourne True si le nom contient uniquement des lettres, espaces, apostrophes ou traits d'union (2-25 chars).
+    if not name:
+        return False
+    return bool(NAME_REGEX.match(name.strip()))
+
+
+def is_strong_password(pw: str):
+    #Vérifie la robustesse du mot de passe. Retourne (True, None) ou (False, message).
+    if pw is None:
+        return False, "Mot de passe manquant."
+    if len(pw) < 8:
+        return False, "Le mot de passe doit contenir au moins 8 caractères."
+    if not re.search(r"[a-z]", pw):
+        return False, "Le mot de passe doit contenir au moins une lettre minuscule."
+    if not re.search(r"[A-Z]", pw):
+        return False, "Le mot de passe doit contenir au moins une lettre majuscule."
+    if not re.search(r"\d", pw):
+        return False, "Le mot de passe doit contenir au moins un chiffre."
+    if not re.search(r"[!@#$%^&*()_+\-\=\[\]{};':\"\\|,.<>\/?`~]", pw):
+        return False, "Le mot de passe doit contenir au moins un caractère spécial."
+    return True, None
+
+# Route pour le tableau de bord utilisateur
+# retourne la page du tableau de bord avec le nom de l'utilisateur connecté
 @app.route('/dashboard')
 @login_required
 def dashboard():
     return render_template('dashboard.html', nom=current_user.nom)
+
+# Route pour la page d'inscription
+# retourne à la page d'accueil après une inscription réussie, sinon reste sur la page d'inscription avec un message d'erreur
+@app.route('/inscription', methods=['GET', 'POST'])
+def inscription():
+    form = RegisterForm()
+    # Vérifier si le formulaire (POST) est soumis et valide
+    if form.validate_on_submit():
+        nom = form.nom.data.strip()
+        courriel = form.courriel.data.strip()
+        mot_de_passe = form.mot_de_passe.data
+        mot_de_passe_confirm = form.mot_de_passe_confirm.data
+
+        # validations côté serveur
+        valid = True
+        if not is_valid_name(nom):
+            form.nom.errors.append("Nom invalide — utilisez lettres, espaces, apostrophes ou traits d'union (2-25 caractères).")
+            valid = False
+        if not is_valid_email(courriel):
+            form.courriel.errors.append("Courriel invalide.")
+            valid = False
+        ok, msg = is_strong_password(mot_de_passe)
+        if not ok:
+            form.mot_de_passe.errors.append(msg)
+            valid = False
+        if mot_de_passe != mot_de_passe_confirm:
+            form.mot_de_passe_confirm.errors.append("Les mots de passe ne correspondent pas.")
+            valid = False
+        if not valid:
+            return render_template('register.html', form=form)
+
+        # Vérifier si un utilisateur avec le même courriel existe déjà
+        db = get_db()
+        existing = db.get_utilisateur_par_courriel(courriel)
+        if existing:
+            form.courriel.errors.append("Un compte existe déjà pour ce courriel.")
+            return render_template('register.html', form=form)
+
+        hashed = generate_password_hash(mot_de_passe)
+        # Insérer le nouvel utilisateur dans la base de données
+        id = db.insert_utilisateur(nom, courriel, hashed)
+        return redirect(url_for('page_acceuil'))
+    else:
+        return render_template('register.html', form=form)
+
+# Route pour la page de connexion
+# retourne à la page d'accueil après une connexion réussie, sinon reste sur la page de connexion avec un message d'erreur
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    form = LoginForm()
+    if form.validate_on_submit():   # vérifie POST + token CSRF + validators
+        # validations structurelles
+        if not is_valid_email(form.courriel.data.strip()):
+            form.courriel.errors.append("Courriel invalide.")
+            return render_template('login.html', form=form)
+
+        courriel = form.courriel.data.strip()
+        mot_de_passe = form.mot_de_passe.data.strip()
+        db = get_db()
+        utilisateur = db.get_utilisateur_par_courriel(courriel)
+        # Vérifier si l'utilisateur existe et si le mot de passe est correct
+        if utilisateur and check_password_hash(utilisateur['mot_de_passe'], mot_de_passe):
+            user_obj = User(utilisateur['id_utilisateur'], utilisateur['nom'], utilisateur['courriel'])
+            # Connecter l'utilisateur et gérer la session 
+            login_user(user_obj, remember=form.remember.data)
+            # Rediriger vers la page suivante ou la page d'accueil
+            next_page = request.args.get('next')
+            if next_page and is_safe_url(next_page):
+                return redirect(next_page)
+            return redirect(url_for('page_acceuil'))
+        else:
+            form.mot_de_passe.errors.append("Courriel ou mot de passe incorrect.")
+            return render_template('login.html', form=form)
+    else:
+        return render_template('login.html', form=form)
+
+# Gestion des erreurs CSRF
+@app.errorhandler(CSRFError)
+def handle_csrf_error(e):
+    return render_template('csrf_error.html', reason=e.description), 400
 
 if __name__ == '__main__':
     app.run(debug=True)
