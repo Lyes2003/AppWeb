@@ -8,22 +8,32 @@
 <body>
     <h1>Login</h1>
     <form method="post" action="{{ url_for('login') }}">
+        {{ form.hidden_tag() }}   <!-- insère le champ csrf_token caché -->
         <label for="courriel">Courriel:</label>
-        <input type="email" id="courriel" name="courriel" required><br><br>
+        <input type="email" id="courriel" name="courriel" required value="{{ form.courriel.data or '' }}"><br><br>
+
         <label for="mot_de_passe">Mot de passe:</label>
         <input type="password" id="mot_de_passe" name="mot_de_passe" required><br><br>
+        
         <label for="remember">
             <input type="checkbox" id="remember" name="remember"> Se souvenir de moi
         </label><br><br>
+
         <button type="submit">Se connecter</button>
     </form>
     {% if error %}
         <p style="color: red;">{{ error }}</p>
     {% endif %}    
     <p>Pas de compte ? <a href="{{ url_for('inscription') }}">S'inscrire</a></p>
-    </form>
-    {% if error %}
-        <p style="color: red;">{{ error }}</p>
-    {% endif %}
-</body>
+
+   {% if form.errors %}
+  <ul class="errors">
+    {% for field, errors in form.errors.items() %}
+      {% for err in errors %}
+        <li>{{ err }}</li>
+      {% endfor %}
+    {% endfor %}
+  </ul>
+{% endif %}
+</body>     
 </html>
