@@ -222,9 +222,12 @@ def login():
         return render_template('login.html', form=form)
 
 # Gestion des erreurs CSRF
-@app.errorhandler(CSRFError)
+@app.errorhandler(CSRFError) # appelle cette fonction en cas d'erreur CSRF
 def handle_csrf_error(e):
-    return render_template('csrf_error.html', reason=e.description), 400
+    # message de secours si description manquante
+    reason = getattr(e, "description", None) or str(e) or "Jeton CSRF manquant ou invalide." # message par défaut
+    app.logger.warning("CSRF failure: %s (path=%s, ip=%s)", reason, request.path, request.remote_addr) # log de l'erreur CSRF
+    return render_template("csrf_error.html", reason=reason), 400
 
 if __name__ == '__main__':
     app.run(debug=True)
