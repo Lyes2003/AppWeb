@@ -28,13 +28,13 @@ from flask_wtf.csrf import CSRFError
 app = Flask(__name__, static_url_path="", static_folder="static")
 
 # Configuration de l'application Flask
-app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'change_me_secure_key')
+app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'change_me_secure_key') # clé secrète pour les sessions et CSRF
 csrf = CSRFProtect(app)  # active la protection CSRF pour l'application
 
 # Configuration des cookies de session pour la sécurité
 app.config['REMEMBER_COOKIE_NAME'] = 'my_flask_app_remember' # Nom du cookie "se souvenir de moi"
 app.config['REMEMBER_COOKIE_DURATION'] = timedelta(days=15) # Durée de vie du cookie "se souvenir de moi"
-app.config['SESSION_COOKIE_SECURE'] = False # Utiliser True en production avec HTTPS
+app.config['SESSION_COOKIE_SECURE'] = False # permet d'envoyer le cookie uniquement via HTTPS (mettre à True en production avec HTTPS)
 app.config['SESSION_COOKIE_HTTPONLY'] = True # Empêche l'accès JavaScript au cookie
 app.config['SESSION_COOKIE_SAMESITE'] = 'Lax' # Protège contre les attaques CSRF
 
@@ -43,7 +43,7 @@ login_manager = LoginManager()
 login_manager.init_app(app)
 login_manager.login_view = 'login'
 
-#--- User class for Flask-Login ---
+#--- User class pour Flask-Login ---
 class User(UserMixin):
     def __init__(self, id_utilisateur, nom, courriel):
         self.id = id_utilisateur
@@ -66,7 +66,8 @@ def get_db():
         g._database = Database()
     return g._database
 
-# Close database connection at the end of request
+
+# fermeture de la connexion à la base de données après chaque requête
 @app.teardown_appcontext
 def close_connection(exception):
     db = getattr(g, '_database', None)
@@ -83,14 +84,13 @@ def page_acceuil():
 @app.route('/logout')
 @login_required
 def logout():
-    
     logout_user()
     return redirect(url_for('page_acceuil'))
 
 # Route pour une page protégée
 # retourne un message avec le nom de l'utilisateur connecté
 @app.route('/protected')
-@login_required
+@login_required 
 def protected():
     return f"Bonjour {current_user.nom} — page protégée"
 
@@ -108,21 +108,24 @@ def is_safe_url(target):
 EMAIL_REGEX = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 NAME_REGEX = re.compile(r"^[A-Za-zÀ-ÖØ-öø-ÿ' \-]{2,100}$")
 
-
+# Vérifie si le courriel est valide
+# retourne True si le courriel est valide, False sinon
 def is_valid_email(email: str) -> bool:
     #Retourne True si le courriel a un format plausible.
     if not email:
         return False
     return bool(EMAIL_REGEX.match(email))
 
-
+# Vérifie si le nom est valide (lettres, espaces, apostrophes, traits d'union)
+# retourne True si le nom est valide, False sinon
 def is_valid_name(name: str) -> bool:
     #Retourne True si le nom contient uniquement des lettres, espaces, apostrophes ou traits d'union (2-25 chars).
     if not name:
         return False
     return bool(NAME_REGEX.match(name.strip()))
 
-
+# Vérifie la robustesse du mot de passe
+# retourne (True, None) si le mot de passe est fort, sinon (False, message)
 def is_strong_password(pw: str):
     #Vérifie la robustesse du mot de passe. Retourne (True, None) ou (False, message).
     if pw is None:
@@ -152,7 +155,8 @@ def dashboard():
 def inscription():
     form = RegisterForm()
     # Vérifier si le formulaire (POST) est soumis et valide
-    if form.validate_on_submit():
+    if form.validate_on_submit(): # retourne si le form a ete soumis et valide (POST + token CSRF + validators)
+        # Récupérer les données du formulaire
         nom = form.nom.data.strip()
         courriel = form.courriel.data.strip()
         mot_de_passe = form.mot_de_passe.data
@@ -200,7 +204,7 @@ def login():
         if not is_valid_email(form.courriel.data.strip()):
             form.courriel.errors.append("Courriel invalide.")
             return render_template('login.html', form=form)
-
+        # Récupérer les données du formulaire
         courriel = form.courriel.data.strip()
         mot_de_passe = form.mot_de_passe.data.strip()
         db = get_db()
@@ -211,7 +215,7 @@ def login():
             # Connecter l'utilisateur et gérer la session 
             login_user(user_obj, remember=form.remember.data)
             # Rediriger vers la page suivante ou la page d'accueil
-            next_page = request.args.get('next')
+            next_page = request.args.get('next') 
             if next_page and is_safe_url(next_page):
                 return redirect(next_page)
             return redirect(url_for('page_acceuil'))

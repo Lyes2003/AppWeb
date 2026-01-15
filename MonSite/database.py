@@ -137,8 +137,8 @@ class Database:
         lastId = cursor.fetchone()[0]
         connection.commit()
         return lastId
-    
-    def insert_document(self, id_chapitre, nom_document, url_document, taillee):
+
+    def insert_document(self, id_chapitre, nom_document, url_document, type_document):
         connection = self.get_connection()
         query = ("insert into documents(id_chapitre, nom_document, url_document, "
                  "type_document) values(?, ?, ?, ?)")
