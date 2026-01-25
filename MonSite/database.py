@@ -89,6 +89,43 @@ class Database:
         cursor.execute(query)
         all_data = cursor.fetchall()
         return [_build_cours(item) for item in all_data]
+    
+    def get_cours_par_id(self, cours_id):
+        cursor = self.get_connection().cursor()
+        query = ("select id_cours, nom_cours, description from cours "
+                 "where id_cours = ?")
+        cursor.execute(query, (cours_id,))
+        item = cursor.fetchone()
+        if item is None:
+            return None
+        else:
+            return _build_cours(item)
+    
+    def insert_cours(self, nom_cours, description):
+        connection = self.get_connection()
+        query = ("insert into cours(nom_cours, description) "
+                 "values(?, ?)")
+        connection.execute(query, (nom_cours, description))
+        cursor = connection.cursor()
+        cursor.execute("select last_insert_rowid()")
+        lastId = cursor.fetchone()[0]
+        connection.commit()
+        return lastId
+    
+    def delete_cours(self, cours_id):
+        connection = self.get_connection()
+        query = "delete from cours where id_cours = ?"
+        connection.execute(query, (cours_id,))
+        connection.commit()
+        return True
+    
+    def modify_cours(self, cours_id, nom_cours, description):
+        connection = self.get_connection()
+        query = ("update cours set nom_cours = ?, description = ? "
+                 "where id_cours = ?")
+        connection.execute(query, (nom_cours, description, cours_id))
+        connection.commit()
+        return True
 
     def get_chapitres(self):
         cursor = self.get_connection().cursor()
