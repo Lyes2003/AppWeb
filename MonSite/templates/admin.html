@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Admin Panel</title>
+</head>
+<body>
+    <h1>Admin Panel</h1>
+    <p>Welcome, {{ current_user.nom }}! Vous avez des privilèges administratifs.</p>
+
+    <!-- Bouton pour ajouter un cours -->
+    <a href="{{ url_for('add_cours') }}">Ajouter un cours</a>
+
+    <!-- Tableau des cours -->
+    <h2>Liste des cours</h2>
+    <table border="1">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Nom du cours</th>
+                <th>Description</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for cours in cours %}
+            <tr>
+                <td>{{ cours['id_cours'] }}</td>
+                <td>{{ cours['nom_cours'] }}</td>
+                <td>{{ cours['description'] }}</td>
+                <td>
+                    <a href="{{ url_for('modifier_cours', id_cours=cours['id_cours']) }}">Modifier</a>
+                    <form method="post" action="{{ url_for('supprimer_cours', id_cours=cours['id_cours']) }}" style="display:inline;">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                        <button type="submit" onclick="return confirm('Êtes-vous sûr de vouloir supprimer ce cours ?')">Supprimer</button>
+                    </form>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <a href="{{ url_for('logout') }}">Logout</a>
+    <a href="{{ url_for('dashboard') }}">Dashboard</a>
+</body>
+</html>

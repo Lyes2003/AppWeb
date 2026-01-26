@@ -9,7 +9,10 @@
     <h1>Bienvenue sur la page d'accueil</h1>
     {% if current_user.is_authenticated %}
         Bonjour {{ current_user.nom }} | <a href="{{ url_for('logout') }}">Se déconnecter</a> |
-        <a href="{{ url_for('protected') }}">Espace protégé</a>
+        <a href="{{ url_for('protected') }}">Espace protégé</a> |
+        {% if current_user.is_admin %}
+            <a href="{{ url_for('admin') }}">Panneau d'administration</a>
+        {% endif %}
     {% else %}
         <a href="{{ url_for('inscription') }}">S'inscrire</a> | <a href="{{ url_for('login') }}">Se connecter</a>
     {% endif %}

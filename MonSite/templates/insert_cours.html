@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Insert Course</title>
+</head>
+<body>
+    {% if edit %}
+        <h2>Modifier le cours existant</h2>
+    {% else %}
+        <h2>Ajouter un nouveau cours</h2>
+    {% endif %}
+    <form action="{% if edit %}{{ url_for('modifier_cours', id_cours=cours['id_cours']) }}{% else %}{{ url_for('add_cours') }}{% endif %}" method="post">
+        {{ form.hidden_tag() }}  
+        <label for="nom_cours">Nom du cours:</label>
+        {{ form.nom_cours() }}<br><br>
+
+        <label for="description">Description:</label>
+        {{ form.description() }}<br><br>
+        
+        {% if edit %}
+            <button type="submit">Modifier le cours</button>
+        {% else %}
+            <button type="submit">Ajouter le cours</button>
+        {% endif %}
+    </form>
+    {% if error %}
+        <p style="color: red;">{{ error }}</p>
+    {% endif %}
+
+   {% if form.errors %}
+  <ul class="errors">
+    {% for field, errors in form.errors.items() %}
+      {% for err in errors %}
+        <li>{{ err }}</li>
+      {% endfor %}
+    {% endfor %}
+  </ul>
+{% endif %}
+    
+</body>
+</html>

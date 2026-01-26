@@ -8,18 +8,18 @@
 <body>
     <h1>Enregistrement</h1>
     <form action="{{ url_for('inscription') }}" method="post">
-        {{ form.hidden_tag() }}   <!-- insère le champ csrf_token caché -->
+        {{ form.hidden_tag() }}  <!-- insère le champ csrf_token caché -->
         <label for="nom">Nom:</label>
-        <input type="text" id="nom" name="nom" required value="{{ form.nom.data or '' }}"><br><br>
+        {{ form.nom() }}<br><br>
 
         <label for="courriel">Courriel:</label>
-        <input type="email" id="courriel" name="courriel" required value="{{ form.courriel.data or '' }}"><br><br>
+        {{ form.courriel() }}<br><br>
 
         <label for="mot_de_passe">Mot de passe:</label>
-        <input type="password" id="mot_de_passe" name="mot_de_passe" required><br><br>
+        {{ form.mot_de_passe() }}<br><br>
 
         <label for="mot_de_passe_confirm">Confirmer le mot de passe:</label>
-        <input type="password" id="mot_de_passe_confirm" name="mot_de_passe_confirm" required><br><br>
+        {{ form.mot_de_passe_confirm() }}<br><br>
 
         <button type="submit">S'enregistrer</button>
     </form>

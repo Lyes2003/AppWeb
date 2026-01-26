@@ -8,5 +8,15 @@
 <body>
     <h1>Bienvenue sur votre tableau de bord, {{ nom }}!</h1>
     <p>Ceci est votre espace personnel où vous pouvez gérer vos informations et paramètres.</p>
+
+    <h2>Cours disponibles</h2>
+    <ul>
+        {% for cours in cours %}
+            <div class="cours">
+                <h3><a href="{{ url_for('cours_detail', id_cours=cours['id_cours']) }}">{{ cours.nom_cours }}</a></h3>
+                <p>{{ cours['description'] }}</p>
+            </div>
+        {% endfor %}
+    </ul>
 </body>
 </html>
