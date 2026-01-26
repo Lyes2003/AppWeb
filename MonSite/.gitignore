@@ -1,6 +1,0 @@
-.env
-__pycache__/
-*.swp
-.DS_Store
-instance/
-venv/

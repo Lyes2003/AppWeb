@@ -27,3 +27,6 @@ create table documents (
     url_document varchar(255) not null,
     type_document varchar(50) not null
 );
+
+insert into utilisateurs (nom, courriel, mot_de_passe) values
+('Admin', 'chikhlyes55@gmail.com', 'Lool2003%');
