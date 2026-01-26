@@ -18,3 +18,14 @@ class RegisterForm(FlaskForm):
     mot_de_passe = PasswordField('Mot de passe', validators=[DataRequired()]) # Mot de passe obligatoire
     mot_de_passe_confirm = PasswordField('Confirmer', validators=[DataRequired(), EqualTo('mot_de_passe')]) # Confirmation du mot de passe
     submit = SubmitField("S'enregistrer") # Bouton de soumission
+
+# Formulaire pour admin pour ajouter un cours
+class AddCourseForm(FlaskForm):
+    nom_cours = StringField('Nom du cours', validators=[DataRequired(), Length(max=100)]) # Nom du cours limité à 100 caractères
+    description = StringField('Description', validators=[DataRequired(), Length(max=255)]) # Description limitée à 255 caractères
+    submit = SubmitField('Ajouter le cours') # Bouton de soumission
+
+# Formulaire pour admin pour supprimer un cours
+class DeleteCourseForm(FlaskForm):
+    cours_id = StringField('ID du cours', validators=[DataRequired()]) # ID du cours obligatoire
+    submit = SubmitField('Supprimer le cours') # Bouton de soumission
