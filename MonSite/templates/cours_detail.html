@@ -7,6 +7,17 @@
 <body>
     <h1>{{ cours['nom_cours'] }}</h1>
     <p><strong>Description :</strong> {{ cours['description'] }}</p>
+    <h2>Chapitres</h2>
+    <ul>
+        {% for chapitre in chapitres %}
+            <li>
+                <a href="{{ url_for('chapitre_detail', id_cours=cours['id_cours'], id_chapitre=chapitre['id_chapitre']) }}">
+                    {{ chapitre['titre'] }}
+                </a>
+            </li>
+        {% else %}
+            <li>Aucun chapitre disponible pour ce cours.</li>
+        {% endfor %}
     <a href="{{ url_for('dashboard') }}">Retour au dashboard</a>
 </body>
 </html>
