@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chapitre details</title>
+</head>
+<body>
+    <h1>Détails du chapitre : {{ chapitre['titre'] }}</h1>
+    <p><strong>Description :</strong> {{ chapitre['contenu'] }}</p>
+
+    <h2>Documents associés</h2>
+    {% if documents %}
+        {% for document in documents %}
+            <div style="margin-bottom:1.25rem;">
+                <h3>{{ document['nom_document'] }}</h3>
+                <div id="doc-{{ document['id_document'] }}" class="hidden" style="margin-top:0.5rem;">
+                    <div class="viewer-container">
+                        <iframe src="{{ url_for('serve_document', id_document=document['id_document']) }}" width="100%" height="100%" style="border:0;" title="{{ document['nom_document'] }}"></iframe>
+                    </div>
+                </div>
+            </div>
+        {% endfor %}
+    {% else %}
+        <p>Aucun document disponible pour ce chapitre.</p>
+    {% endif %}
+
+    <a href="{{ url_for('chapitres_cours', id_cours=chapitre['id_cours']) }}">Retour aux chapitres du cours</a>
+    
+</body>
+</html>

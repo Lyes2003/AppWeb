@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Insertion chapitre</title>
+</head>
+<body>
+    <h1>Ajouter un nouveau chapitre</h1>
+    <form method="POST" enctype="multipart/form-data">
+        {{ form.hidden_tag() }}
+        <label for="nom_chapitre">Nom du chapitre:</label>
+        {{ form.nom_chapitre() }}<br><br>
+
+        <label for="description">Description:</label>
+        {{ form.description() }}<br><br>
+
+        <label for="pdf">Document PDF:</label>
+        {{ form.pdf() }}<br><br>
+
+        <button type="submit">Ajouter le chapitre</button>
+    </form>
+
+    {% if form.errors %}
+  <ul class="errors">
+    {% for field, errors in form.errors.items() %}
+      {% for err in errors %}
+        <li>{{ err }}</li>
+      {% endfor %}
+    {% endfor %}
+  </ul>
+{% endif %}
+
+    <a href="{{ url_for('chapitres_cours', id_cours=id_cours) }}">Retour aux chapitres du cours</a>
+    
+</body>
+</html>

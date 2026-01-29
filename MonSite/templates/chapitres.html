@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chapitres</title>
+</head>
+<body>
+    <h1>Chapitres du cours</h1>
+    <ul>
+        {% for chapitre in chapitres %}
+        <div>   
+            <h3><a href="{{ url_for('chapitre_detail',id_cours=id_cours, id_chapitre=chapitre['id_chapitre']) }}">{{ chapitre['titre'] }}</a></h3>
+            <p>{{ chapitre['contenu'] }}</p>
+        </div>          
+        {% endfor %}
+    </ul>
+    <a href="{{ url_for('cours_detail', id_cours=id_cours) }}">Retour au cours</a>
+</body>
+</html>
