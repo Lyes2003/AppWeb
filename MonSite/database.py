@@ -22,7 +22,8 @@ def _build_utilisateurs(result_set_item):
     utilisateur["nom"] = result_set_item[1]
     utilisateur["courriel"] = result_set_item[2]
     utilisateur["mot_de_passe"] = result_set_item[3]
-    utilisateur["created_at"] = result_set_item[4]
+    utilisateur["is_admin"] = result_set_item[4]  
+    utilisateur["created_at"] = result_set_item[5]  
     return utilisateur
 
 def _build_cours(result_set_item):
@@ -46,7 +47,7 @@ def _build_documents(result_set_item):
     document["id_chapitre"] = result_set_item[1]
     document["nom_document"] = result_set_item[2]
     document["url_document"] = result_set_item[3]
-    document["taillee"] = result_set_item[4]
+    document["type_document"] = result_set_item[4]
     return document
 
 
@@ -66,7 +67,7 @@ class Database:
     
     def get_utilisateurs(self):
         cursor = self.get_connection().cursor()
-        query = ("select id_utilisateur, nom, courriel, mot_de_passe, "
+        query = ("select id_utilisateur, nom, courriel, mot_de_passe, is_admin, "
                  "created_at from utilisateurs")
         cursor.execute(query)
         all_data = cursor.fetchall()
@@ -74,7 +75,7 @@ class Database:
 
     def get_utilisateur_par_courriel(self, courriel):
         cursor = self.get_connection().cursor()
-        query = ("select id_utilisateur, nom, courriel, mot_de_passe, "
+        query = ("select id_utilisateur, nom, courriel, mot_de_passe, is_admin, "
                  "created_at from utilisateurs where courriel = ?")
         cursor.execute(query, (courriel,))
         item = cursor.fetchone()
@@ -82,6 +83,28 @@ class Database:
             return None
         else:
             return _build_utilisateurs(item)
+    
+    def get_utilisateur(self, utilisateur_id):
+        cursor = self.get_connection().cursor()
+        query = ("select id_utilisateur, nom, courriel, mot_de_passe, is_admin, "
+                 "created_at from utilisateurs where id_utilisateur = ?")
+        cursor.execute(query, (utilisateur_id,))
+        item = cursor.fetchone()
+        if item is None:
+            return item
+        else:
+            return _build_utilisateurs(item)
+
+    def insert_utilisateur(self, nom, courriel, mot_de_passe):
+        connection = self.get_connection()
+        query = ("insert into utilisateurs(nom, courriel, mot_de_passe, is_admin) "
+                 "values(?, ?, ?, ?)")
+        connection.execute(query, (nom, courriel, mot_de_passe, False))
+        cursor = connection.cursor()
+        cursor.execute("select last_insert_rowid()")
+        lastId = cursor.fetchone()[0]
+        connection.commit()
+        return lastId
 
     def get_cours(self):
         cursor = self.get_connection().cursor()
@@ -133,6 +156,50 @@ class Database:
         cursor.execute(query)
         all_data = cursor.fetchall()
         return [_build_chapitres(item) for item in all_data]
+    
+    def get_chapitre_par_id(self, chapitre_id):
+        cursor = self.get_connection().cursor()
+        query = ("select id_chapitre, id_cours, titre, contenu from chapitres "
+                 "where id_chapitre = ?")
+        cursor.execute(query, (chapitre_id,))
+        item = cursor.fetchone()
+        if item is None:
+            return None
+        else:
+            return _build_chapitres(item)
+    
+    def get_chapitre_par_id_cours(self, cours_id):
+        cursor = self.get_connection().cursor()
+        query = ("select id_chapitre, id_cours, titre, contenu from chapitres "
+                 "where id_cours = ?")
+        cursor.execute(query, (cours_id,))
+        all_data = cursor.fetchall()
+        return [_build_chapitres(item) for item in all_data]
+
+    def insert_chapitre(self, id_cours, titre, contenu):
+        connection = self.get_connection()
+        query = ("insert into chapitres(id_cours, titre, contenu) "
+                 "values(?, ?, ?)")
+        connection.execute(query, (id_cours, titre, contenu))
+        cursor = connection.cursor()
+        cursor.execute("select last_insert_rowid()")
+        lastId = cursor.fetchone()[0]
+        connection.commit()
+        return lastId
+
+    def delete_chapitre(self, chapitre_id):
+        connection = self.get_connection()
+        query = "delete from chapitres where id_chapitre = ?"
+        connection.execute(query, (chapitre_id,))
+        connection.commit()
+        return True
+    
+    def count_chapitres_par_cours(self, cours_id):
+        cursor = self.get_connection().cursor()
+        query = ("select count(*) from chapitres where id_cours = ?")
+        cursor.execute(query, (cours_id,))
+        item = cursor.fetchone()
+        return item[0] if item else 0
 
     def get_documents(self):
         cursor = self.get_connection().cursor()
@@ -142,21 +209,10 @@ class Database:
         all_data = cursor.fetchall()
         return [_build_documents(item) for item in all_data]
 
-    def get_utilisateur(self, utilisateur_id):
-        cursor = self.get_connection().cursor()
-        query = ("select id_utilisateur, nom, courriel, mot_de_passe, "
-                 "created_at from utilisateurs where id_utilisateur = ?")
-        cursor.execute(query, (utilisateur_id,))
-        item = cursor.fetchone()
-        if item is None:
-            return item
-        else:
-            return _build_utilisateurs(item)
-
     def get_document(self, document_id):
         cursor = self.get_connection().cursor()
         query = ("select id_document, id_chapitre, nom_document, url_document, "
-                 "taillee from documents where id_document = ?")
+                 "type_document from documents where id_document = ?")
         cursor.execute(query, (document_id,))
         item = cursor.fetchone()
         if item is None:
@@ -164,16 +220,13 @@ class Database:
         else:
             return _build_documents(item)
 
-    def insert_utilisateur(self, nom, courriel, mot_de_passe):
-        connection = self.get_connection()
-        query = ("insert into utilisateurs(nom, courriel, mot_de_passe) "
-                 "values(?, ?, ?)")
-        connection.execute(query, (nom, courriel, mot_de_passe))
-        cursor = connection.cursor()
-        cursor.execute("select last_insert_rowid()")
-        lastId = cursor.fetchone()[0]
-        connection.commit()
-        return lastId
+    def get_documents_par_chapitre(self, chapitre_id):
+        cursor = self.get_connection().cursor()
+        query = ("select id_document, id_chapitre, nom_document, url_document, "
+                 "type_document from documents where id_chapitre = ?")
+        cursor.execute(query, (chapitre_id,))
+        all_data = cursor.fetchall()
+        return [_build_documents(item) for item in all_data]
 
     def insert_document(self, id_chapitre, nom_document, url_document, type_document):
         connection = self.get_connection()
