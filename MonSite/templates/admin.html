@@ -20,6 +20,8 @@
                 <th>Nom du cours</th>
                 <th>Description</th>
                 <th>Actions</th>
+                <th>Nbr Chapitres</th>
+                <th>Action chapitres</th>
             </tr>
         </thead>
         <tbody>
@@ -28,6 +30,7 @@
                 <td>{{ cours['id_cours'] }}</td>
                 <td>{{ cours['nom_cours'] }}</td>
                 <td>{{ cours['description'] }}</td>
+
                 <td>
                     <a href="{{ url_for('modifier_cours', id_cours=cours['id_cours']) }}">Modifier</a>
                     <form method="post" action="{{ url_for('supprimer_cours', id_cours=cours['id_cours']) }}" style="display:inline;">
@@ -35,6 +38,13 @@
                         <button type="submit" onclick="return confirm('Êtes-vous sûr de vouloir supprimer ce cours ?')">Supprimer</button>
                     </form>
                 </td>
+
+                <td>{{ cours['nbr_chapitres'] }}</td>
+
+                <td>
+                    <a href="{{ url_for('ajouter_chapitre', id_cours=cours['id_cours']) }}">Ajouter chapitre</a>
+                </td>
+                
             </tr>
             {% endfor %}
         </tbody>
