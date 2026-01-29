@@ -3,6 +3,7 @@
 from flask_wtf import FlaskForm
 from wtforms import StringField, PasswordField, SubmitField, BooleanField
 from wtforms.validators import DataRequired, Email, Length, EqualTo
+from flask_wtf.file import FileField, FileAllowed
 
 # Formulaire de connexion et d'enregistrement avec validation
 class LoginForm(FlaskForm):
@@ -29,3 +30,10 @@ class AddCourseForm(FlaskForm):
 class DeleteCourseForm(FlaskForm):
     cours_id = StringField('ID du cours', validators=[DataRequired()]) # ID du cours obligatoire
     submit = SubmitField('Supprimer le cours') # Bouton de soumission
+
+# Formulaire pour admin pour ajouter un chapitre
+class AddChapterForm(FlaskForm):
+    nom_chapitre = StringField('Nom du chapitre', validators=[DataRequired(), Length(max=100)]) # Nom du chapitre limité à 100 caractères
+    description = StringField('Description', validators=[DataRequired(), Length(max=255)]) # Description limitée à 255 caractères
+    pdf = FileField('Document PDF', validators=[FileAllowed(['pdf'], 'Seuls les fichiers PDF sont autorisés.')]) # Champ pour télécharger un fichier PDF
+    submit = SubmitField('Ajouter le chapitre') # Bouton de soumission
