@@ -9,19 +9,40 @@
     <h1>Bienvenue sur votre tableau de bord, {{ nom }}!</h1>
     <p>Ceci est votre espace personnel où vous pouvez gérer vos informations et paramètres.</p>
 
+
+    <form action="{{ url_for('recherche') }}" method="POST">
+        {{ form.hidden_tag() }}
+        <label for="recherche">Rechercher un cours :</label>
+        {{ form.recherche() }}<br><br>
+        <button type="submit">Rechercher</button>
+    </form>
+
     <h2>Cours disponibles</h2>
     <ul>
-        {% for cours in cours %}
-            <div class="cours">
-                <h3><a href="{{ url_for('cours_detail', id_cours=cours['id_cours']) }}">{{ cours['nom_cours'] }}</a></h3>
-                <p>{{ cours['description'] }}</p>
-            </div>
-        {% endfor %}
+        {% if query %}
+            {% for result in results %}
+                <div class="cours">
+                    <h3><a href="{{ url_for('cours_detail', id_cours=result['id_cours']) }}">{{ result['nom_cours'] }}</a></h3>
+                    <p>{{ result['description'] }}</p>
+                </div>
+            {% endfor %}
+            {% if not results %}
+                <p>Aucun cours trouvé pour "{{ query }}".</p>
+            {% endif %}
+        {% else %}
+            {% for cours in cours %}
+                <div class="cours">
+                    <h3><a href="{{ url_for('cours_detail', id_cours=cours['id_cours']) }}">{{ cours['nom_cours'] }}</a></h3>
+                    <p>{{ cours['description'] }}</p>
+                </div>
+            {% endfor %}
+            {% if not cours %}
+                <p>Aucun cours disponible pour le moment.</p>
+             {% endif %}
+        {% endif %}
     </ul>
 
-    {% if not cours %}
-        <p>Aucun cours disponible pour le moment.</p>
-    {% endif %}
+    
 
       {% if current_user.is_admin %}
         <a href="{{ url_for('admin') }}">Accéder à l'administration</a>
