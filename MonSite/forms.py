@@ -37,3 +37,13 @@ class AddChapterForm(FlaskForm):
     description = StringField('Description', validators=[DataRequired(), Length(max=255)]) # Description limitée à 255 caractères
     pdf = FileField('Document PDF', validators=[FileAllowed(['pdf'], 'Seuls les fichiers PDF sont autorisés.')]) # Champ pour télécharger un fichier PDF
     submit = SubmitField('Ajouter le chapitre') # Bouton de soumission
+
+# Formulaire pour admin pour supprimer un chapitre
+class DeleteChapitreForm(FlaskForm):
+    chapitre_id = StringField('ID du chapitre', validators=[DataRequired()]) # ID du chapitre obligatoire
+    submit = SubmitField('Supprimer le chapitre') # Bouton de soumission
+
+# Formulaire pour recherche de cours
+class RechercheForm(FlaskForm):
+    recherche = StringField('Recherche', validators=[Length(max=100)], render_kw={"placeholder": "Entrez le nom du cours à rechercher"}) # Champ de recherche avec texte indicatif
+    submit = SubmitField('Rechercher') # Bouton de soumission
