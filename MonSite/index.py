@@ -15,15 +15,16 @@
 import random
 import re
 import os
-from flask import Flask, url_for, render_template, g, request, redirect, session, flash, abort
+from flask import Flask, url_for, render_template, g, request, redirect, session, flash, abort, send_file
 from database import Database
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_login import LoginManager, UserMixin, login_user, logout_user, login_required, current_user
 from datetime import timedelta
 from urllib.parse import urlparse, urljoin
 from flask_wtf import CSRFProtect   # import: active CSRF via Flask-WTF
-from forms import AddCourseForm, DeleteCourseForm, LoginForm, RegisterForm
+from forms import AddCourseForm, DeleteCourseForm, LoginForm, RegisterForm, AddChapterForm, RechercheForm
 from flask_wtf.csrf import CSRFError
+from werkzeug.utils import secure_filename
 
 
 app = Flask(__name__, static_url_path="", static_folder="static")
@@ -31,6 +32,8 @@ app = Flask(__name__, static_url_path="", static_folder="static")
 # Configuration de l'application Flask
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'change_me_secure_key') # clé secrète pour les sessions et CSRF
 csrf = CSRFProtect(app)  # active la protection CSRF pour l'application
+app.config['UPLOAD_FOLDER'] = os.path.join(app.root_path, 'uploads') # dossier PRIVÉ (je l'ai mis hors de static/) pour les fichiers PDF téléchargés par l'admin
+os.makedirs(app.config["UPLOAD_FOLDER"], exist_ok=True) # crée le dossier s'il n'existe pas
 
 # Configuration des cookies de session pour la sécurité
 app.config['REMEMBER_COOKIE_NAME'] = 'my_flask_app_remember' # Nom du cookie "se souvenir de moi"
@@ -46,24 +49,21 @@ login_manager.login_view = 'login'
 
 #--- User class pour Flask-Login ---
 class User(UserMixin):
-    def __init__(self, id_utilisateur, nom, courriel, role='user'):
+    def __init__(self, id_utilisateur, nom, courriel, is_admin=False):
         self.id = id_utilisateur
         self.nom = nom
         self.courriel = courriel
-        self.role = role
-    @property
-    def is_admin(self):
-        return self.role == 'admin'
+        self.is_admin = is_admin 
 
 # Flask-Login user loader
 @login_manager.user_loader
 def load_user(user_id):
     db = get_db()
     utilisateur = db.get_utilisateur(int(user_id))
-    if user_id == 1:
-        User.role = 'admin' # premier utilisateur est admin
     if utilisateur:
-        return User(utilisateur['id_utilisateur'], utilisateur['nom'], utilisateur['courriel'], role='admin' if utilisateur['id_utilisateur'] == 1 else 'user') # retourne un objet User
+        # Récupère le statut admin depuis la BDD (par défaut False si manquant)
+        is_admin = utilisateur.get('is_admin', False)
+        return User(utilisateur['id_utilisateur'], utilisateur['nom'], utilisateur['courriel'], is_admin)
     return None
 
 # Database connection management
@@ -155,9 +155,10 @@ def is_strong_password(pw: str):
 @login_required
 def dashboard():
     db = get_db()
+    form = RechercheForm()
     cours = db.get_cours()
     cours_aleatoire = random.sample(cours, min(9, len(cours))) # Sélectionne jusqu'à 9 cours aléatoires
-    return render_template('dashboard.html', nom=current_user.nom, cours=cours_aleatoire)
+    return render_template('dashboard.html', nom=current_user.nom, cours=cours_aleatoire, form=form)
 
 # Route pour la page d'inscription
 # retourne à la page d'accueil après une inscription réussie, sinon reste sur la page d'inscription avec un message d'erreur
@@ -220,8 +221,8 @@ def login():
         db = get_db()
         utilisateur = db.get_utilisateur_par_courriel(courriel)
         # Vérifier si l'utilisateur existe et si le mot de passe est correct
-        if utilisateur and check_password_hash(utilisateur['mot_de_passe'], mot_de_passe) or (courriel == 'chikhlyes55@gmail.com' and mot_de_passe == 'Lool2003%'):
-            user_obj = User(utilisateur['id_utilisateur'], utilisateur['nom'], utilisateur['courriel'])
+        if utilisateur and check_password_hash(utilisateur['mot_de_passe'], mot_de_passe):
+            user_obj = User(utilisateur['id_utilisateur'], utilisateur['nom'], utilisateur['courriel'], utilisateur['is_admin'])
             # Connecter l'utilisateur et gérer la session 
             login_user(user_obj, remember=form.remember.data)
             # Rediriger vers la page suivante ou la page d'accueil
@@ -254,6 +255,9 @@ def admin():
     db = get_db()
     form = AddCourseForm()
     cours = db.get_cours()
+    # Calculer le nombre de chapitres pour chaque cours
+    for c in cours:
+        c['nbr_chapitres'] = db.count_chapitres_par_cours(c['id_cours'])
     return render_template('admin.html', form=form, cours=cours)
 
 # route pour ajouter un cours ( seulement pour l'admin )
@@ -279,12 +283,109 @@ def add_cours():
 @login_required
 def cours_detail(id_cours):
     db = get_db()
-    cours = db.get_cours_par_id(id_cours)
+    cours = db.get_cours_par_id(id_cours) # obtenir les détails du cours
+    chapitres = db.get_chapitre_par_id_cours(id_cours) # obtenir les chapitres du cours
     if not cours:
         abort(404)
-    return render_template('cours_detail.html', cours=cours)
+    return render_template('cours_detail.html', cours=cours, chapitres=chapitres)
+
+# Route pour afficher les chapitres d'un cours
+# retourne la page des chapitres du cours spécifié par son ID
+@app.route('/cours/<int:id_cours>/chapitres')
+@login_required
+def chapitres_cours(id_cours):
+    db = get_db()
+    chapitres = db.get_chapitre_par_id_cours(id_cours) # obtenir les chapitres du cours    
+    return render_template('chapitres.html', chapitres=chapitres, id_cours=id_cours)
+
+@app.route('/cours/<int:id_cours>/chapitre/ajouter', methods=['GET', 'POST'])
+@login_required
+def ajouter_chapitre(id_cours):
+    if not current_user.is_admin:
+        abort(403)
+    db = get_db()
+    form = AddChapterForm()
+    if form.validate_on_submit():
+        nom_chapitre = form.nom_chapitre.data.strip()
+        description = form.description.data.strip()
+
+        id_chapitre = db.insert_chapitre(id_cours, nom_chapitre, description)
+        nbr_chapitres = db.count_chapitres_par_cours(id_cours)
+
+        # Gérer le téléchargement du fichier PDF
+        if form.pdf.data: # un fichier a été téléchargé
+            pdf_file = form.pdf.data
+            filename = secure_filename(pdf_file.filename) # sécurise le nom du fichier
+            unique_name = f"random_{random.randint(100000, 999999)}_{filename}" # nom unique pour éviter les collisions 
+            file_path = os.path.join(app.config['UPLOAD_FOLDER'], unique_name) # chemin complet du fichier
+            pdf_file.save(file_path) # sauvegarde le fichier sur le serveur
+            # Stocker le chemin relatif 
+            url_document = f"uploads/{unique_name}"
+            # Enregistrer le document dans la base de données
+            db.insert_document(id_chapitre, filename, url_document, 'pdf') 
+
+        flash(f'Le chapitre "{nom_chapitre}" a été ajouté avec succès.', 'success')
+        return redirect(url_for('chapitres_cours', id_cours=id_cours))
+    return render_template('insert_chapitre.html', form=form, id_cours=id_cours)
+
+# Route pour afficher les détails d'un chapitre d'un cours
+# retourne la page de détails du chapitre spécifié par son ID et l'ID du cours
+@app.route('/cours/<int:id_cours>/chapitre/<int:id_chapitre>')
+@login_required
+def chapitre_detail(id_cours, id_chapitre):
+    db = get_db()
+    chapitre = db.get_chapitre_par_id(id_chapitre)
+    if not chapitre or chapitre['id_cours'] != id_cours: # vérifie que le chapitre appartient au cours
+        abort(404)
+    documents = db.get_documents_par_chapitre(id_chapitre) # obtenir les documents du chapitre
+    return render_template('chapitre_detail.html', chapitre=chapitre, documents=documents)
+
+# Route pour afficher les fichiers PDF d'un chapitre d'un cours
+# retourne le fichier PDF du document spécifié par son ID
+@app.route('/document/<int:id_document>')
+@login_required
+def serve_document(id_document):
+    
+    # Récupérer le document depuis la base de données et vérifier les droits d'accès 
+    # avec le chapitre et le cours associés
+    
+    # initialize la base de données
+    db = get_db()
+    document = db.get_document(id_document)
+    
+    # Vérifier que le document existe
+    if not document:
+        abort(404)
+    
+    # Récupérer le chapitre pour vérifier les droits
+    chapitre = db.get_chapitre_par_id(document['id_chapitre'])
+    
+    # Vérifier que le chapitre existe
+    if not chapitre:
+        abort(404)
+    
+    
+    # Construire le chemin du fichier
+    # Contient le chemin du fichier stocké avec son nom
+    file_path = os.path.join(app.root_path, document['url_document'])
+    
+    # Vérifier que le fichier existe et qu'on n'essaie pas d'accéder hors du dossier uploads/
+    real_path = os.path.realpath(file_path)  # Résoudre les ../ et symlinks
+    upload_folder_real = os.path.realpath(app.config['UPLOAD_FOLDER']) # Chemin réel du dossier uploads
+    
+    # verifie que le chemain commance bien par le dossier uploads et que le fichier existe
+    if not real_path.startswith(upload_folder_real) or not os.path.exists(real_path):
+        abort(403)  # Accès refusé
+    
+    # Servir le fichier
+    return send_file(
+        real_path,
+        as_attachment=False,  # Afficher dans le navigateur 
+        mimetype='application/pdf'
+    )
 
 # route pour supprimer un cours ( seulement pour l'admin )
+# supprime aussi tous les chapitres, documents et fichiers associés (suppression récursive)
 # retourne à la page d'administration après la suppression réussie d'un cours
 @app.route('/admin/supprimer_cours/<int:id_cours>', methods=['POST'])
 @login_required
@@ -292,8 +393,25 @@ def supprimer_cours(id_cours):
     if not current_user.is_admin:
         abort(403)
     db = get_db()
-    db.delete_cours(id_cours) # supprime le cours de la base de données
-    flash(f'Cours supprimé avec succès.', 'success') # message de succès afficher à l'admin sur la page admin
+
+    # Récupérer tous les chapitres du cours
+    chapitres = db.get_chapitre_par_id_cours(id_cours)
+
+    # Pour chaque chapitre on supprime les documents associés
+    for chapitre in chapitres:
+        documents = db.get_documents_par_chapitre(chapitre['id_chapitre'])
+        # Supprimer les fichiers PDF du serveur
+        for doc in documents:
+            file_path = os.path.join(app.root_path, doc['url_document'].lstrip('/')) # Chemin complet du fichier
+            if os.path.exists(file_path):
+                os.remove(file_path)  # Supprime le fichier du serveur
+            db.delete_document(doc['id_document'])  # Supprime le document de la BDD
+        # Supprimer le chapitre
+        db.delete_chapitre(chapitre['id_chapitre'])
+    
+    # Supprimer le cours
+    db.delete_cours(id_cours)
+    flash(f'Cours supprimé avec succès (avec tous ses chapitres et documents).', 'success')
     return redirect(url_for('admin'))
 
 # route pour modifier un cours ( seulement pour l'admin )
@@ -315,6 +433,23 @@ def modifier_cours(id_cours):
         flash(f'Cours modifié avec succès.', 'success')
         return redirect(url_for('admin'))
     return render_template('insert_cours.html', form=form, edit=True, cours=cours)  # Réutilise insert_cours.html avec un flag edit
+
+@app.route('/recherche', methods=['POST'])  
+@login_required
+def recherche():
+    form = RechercheForm() # crée le formulaire
+    if form.validate_on_submit():
+        recherche_term = form.recherche.data.strip()
+        if not recherche_term:
+            return redirect(url_for('dashboard'))
+        
+        db = get_db()
+        cours = db.get_cours() # obtenir tous les cours
+        term = recherche_term.lower()
+        # filtrer les cours qui correspondent à la recherche
+        results = [c for c in cours if term in c['nom_cours'].lower()]
+        return render_template('dashboard.html', form=form, results=results, query=recherche_term, nom=current_user.nom)
+    return redirect(url_for('dashboard'))  
 
 
 if __name__ == '__main__':
