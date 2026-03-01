@@ -255,10 +255,11 @@ def admin():
     db = get_db()
     form = AddCourseForm()
     cours = db.get_cours()
+    chapitres = db.get_chapitres()
     # Calculer le nombre de chapitres pour chaque cours
     for c in cours:
-        c['nbr_chapitres'] = db.count_chapitres_par_cours(c['id_cours'])
-    return render_template('admin.html', form=form, cours=cours)
+        c['nbr_chapitres'] = db.count_chapitres_par_cours(c['id_cours']) # compte le nombre de chapitre par cours
+    return render_template('admin.html', form=form, cours=cours, chapitres=chapitres)
 
 # route pour ajouter un cours ( seulement pour l'admin )
 # retourne à la page d'administration après l'ajout réussi d'un cours
@@ -384,7 +385,7 @@ def serve_document(id_document):
         mimetype='application/pdf'
     )
 
-# route pour supprimer un cours ( seulement pour l'admin )
+# route pour supprimer un cours ( seulement pour l'admin MOI ! )
 # supprime aussi tous les chapitres, documents et fichiers associés (suppression récursive)
 # retourne à la page d'administration après la suppression réussie d'un cours
 @app.route('/admin/supprimer_cours/<int:id_cours>', methods=['POST'])
@@ -432,7 +433,29 @@ def modifier_cours(id_cours):
         db.modify_cours(id_cours, nom_cours, description)
         flash(f'Cours modifié avec succès.', 'success')
         return redirect(url_for('admin'))
-    return render_template('insert_cours.html', form=form, edit=True, cours=cours)  # Réutilise insert_cours.html avec un flag edit
+    return render_template('insert_cours.html', form=form, edit=True, cours=cours) 
+
+@app.route('/cours/<int:id_cours>/chapitre/<int:id_chapitre>/supprimer', methods=['POST'])
+@login_required
+def supprimer_chapitre(id_cours, id_chapitre):
+    if not current_user.is_admin: 
+        abort(403)
+    db = get_db()
+    cours = db.get_cours_par_id(id_cours)
+    chapitre = db.get_chapitre_par_id(id_chapitre)
+    documents = db.get_documents_par_chapitre(id_chapitre)
+    if not cours or not chapitre: 
+        abort(404)
+    for doc in documents:
+        file_path = os.path.join(app.root_path, doc['url_document'].lstrip('/')) # Chemin complet du fichier
+        if os.path.exists(file_path):
+            os.remove(file_path)  # Supprime le fichier du serveur
+        db.delete_document(doc['id_document'])  # Supprime le document de la BDD
+    # Supprimer le chapitre
+    db.delete_chapitre(chapitre['id_chapitre']) 
+
+    flash(f'Chapitre supprimé avec succès (et documents associés).', 'success')
+    return redirect(url_for('admin'))
 
 @app.route('/recherche', methods=['POST'])  
 @login_required
