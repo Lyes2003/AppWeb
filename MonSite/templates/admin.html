@@ -26,26 +26,32 @@
         </thead>
         <tbody>
             {% for cours in cours %}
-            <tr>
-                <td>{{ cours['id_cours'] }}</td>
-                <td>{{ cours['nom_cours'] }}</td>
-                <td>{{ cours['description'] }}</td>
+                <tr>
+                    <td>{{ cours['id_cours'] }}</td>
+                    <td>{{ cours['nom_cours'] }}</td>
+                    <td>{{ cours['description'] }}</td>
 
-                <td>
-                    <a href="{{ url_for('modifier_cours', id_cours=cours['id_cours']) }}">Modifier</a>
-                    <form method="post" action="{{ url_for('supprimer_cours', id_cours=cours['id_cours']) }}" style="display:inline;">
-                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
-                        <button type="submit" onclick="return confirm('Êtes-vous sûr de vouloir supprimer ce cours ?')">Supprimer</button>
-                    </form>
-                </td>
+                    <td>
+                        <a href="{{ url_for('modifier_cours', id_cours=cours['id_cours']) }}">Modifier</a>
+                        <form method="post" action="{{ url_for('supprimer_cours', id_cours=cours['id_cours']) }}" style="display:inline;">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                            <button type="submit" onclick="return confirm('Êtes-vous sûr de vouloir supprimer ce cours ?')">Supprimer</button>
+                        </form>
+                    </td>
 
-                <td>{{ cours['nbr_chapitres'] }}</td>
+                    <td>{{ cours['nbr_chapitres'] }}</td>
 
-                <td>
-                    <a href="{{ url_for('ajouter_chapitre', id_cours=cours['id_cours']) }}">Ajouter chapitre</a>
-                </td>
-                
-            </tr>
+                    <td>
+                        <a href="{{ url_for('ajouter_chapitre', id_cours=cours['id_cours']) }}">Ajouter chapitre</a>
+                        {% for chapitre in chapitres %}
+                            <form method="post" action="{{ url_for('supprimer_chapitre', id_cours=cours['id_cours'], id_chapitre=chapitre['id_chapitre']) }}" style="display:inline;">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                                <button type="submit" onclick="return confirm('Êtes-vous sûr de vouloir supprimer ce chapitre ?')">Supprimer chapitre</button>
+                            </form>
+                        {% endfor %}
+                    </td>
+        
+                </tr>
             {% endfor %}
         </tbody>
     </table>

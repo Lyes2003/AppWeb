@@ -42,9 +42,7 @@
         {% endif %}
     </ul>
 
-    
-
-      {% if current_user.is_admin %}
+    {% if current_user.is_admin %}
         <a href="{{ url_for('admin') }}">Accéder à l'administration</a>
     {% endif %}
 </body>
