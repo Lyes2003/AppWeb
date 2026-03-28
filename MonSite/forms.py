@@ -40,7 +40,8 @@ class AddChapterForm(FlaskForm):
 
 # Formulaire pour admin pour supprimer un chapitre
 class DeleteChapitreForm(FlaskForm):
-    chapitre_id = StringField('ID du chapitre', validators=[DataRequired()]) # ID du chapitre obligatoire
+    id_chapitre = StringField('ID du chapitre', validators=[DataRequired()]) # ID du chapitre obligatoire
+    id_cours = StringField('ID du cours', validators=[DataRequired()]) # ID du cours obligatoire
     submit = SubmitField('Supprimer le chapitre') # Bouton de soumission
 
 # Formulaire pour recherche de cours
