@@ -34,8 +34,9 @@
 
                         <td>
                             <a href="{{ url_for('modifier_cours', id_cours=cours['id_cours']) }}">Modifier</a>
-                            <form method="post" action="{{ url_for('supprimer_cours', id_cours=cours['id_cours']) }}" style="display:inline;">
+                            <form method="post" action="{{ url_for('supprimer_cours') }}" style="display:inline;">
                                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                                <input type="hidden" name="id_cours" value="{{ cours['id_cours'] }}">
                                 <button type="submit" onclick="return confirm('Êtes-vous sûr de vouloir supprimer ce cours ?')">Supprimer</button>
                             </form>
                         </td>
@@ -62,7 +63,7 @@
                         </td>
             
                     </tr>
-                    
+
             {% endfor %}
         </tbody>
     </table>
