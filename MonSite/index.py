@@ -22,7 +22,7 @@ from flask_login import LoginManager, UserMixin, login_user, logout_user, login_
 from datetime import timedelta
 from urllib.parse import urlparse, urljoin
 from flask_wtf import CSRFProtect   # import: active CSRF via Flask-WTF
-from forms import AddCourseForm, DeleteCourseForm, LoginForm, RegisterForm, AddChapterForm, RechercheForm, DeleteChapitreForm
+from forms import AddCourseForm, DeleteCoursForm, LoginForm, RegisterForm, AddChapterForm, RechercheForm, DeleteChapitreForm
 from flask_wtf.csrf import CSRFError
 from werkzeug.utils import secure_filename
 
@@ -388,12 +388,24 @@ def serve_document(id_document):
 # route pour supprimer un cours ( seulement pour l'admin MOI ! )
 # supprime aussi tous les chapitres, documents et fichiers associés (suppression récursive)
 # retourne à la page d'administration après la suppression réussie d'un cours
-@app.route('/admin/supprimer_cours/<int:id_cours>', methods=['POST'])
+@app.route('/admin/supprimer_cours', methods=['POST'])
 @login_required
-def supprimer_cours(id_cours):
+def supprimer_cours():
     if not current_user.is_admin:
         abort(403)
+    form = DeleteCoursForm()
+    if form.validate_on_submit():
+        id_cours = int(form.id_cours.data)
+    if not id_cours:
+        flash('Veuillez sélectionner un cours.', 'error')
+        return redirect(url_for('admin'))
+
     db = get_db()
+    cours = db.get_cours_par_id(id_cours)
+
+    # si cours n'existe pas on affiche la page 404
+    if not cours:
+        abort(404) 
 
     # Récupérer tous les chapitres du cours
     chapitres = db.get_chapitre_par_id_cours(id_cours)
@@ -454,6 +466,8 @@ def supprimer_chapitre():
     documents = db.get_documents_par_chapitre(id_chapitre)
     if not chapitre or  chapitre['id_cours'] != id_cours: 
         abort(404)
+
+    # supprimer les fichires PDF du serveur
     for doc in documents:
         file_path = os.path.join(app.root_path, doc['url_document'].lstrip('/')) # Chemin complet du fichier
         if os.path.exists(file_path):
