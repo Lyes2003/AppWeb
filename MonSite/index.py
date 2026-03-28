@@ -22,7 +22,7 @@ from flask_login import LoginManager, UserMixin, login_user, logout_user, login_
 from datetime import timedelta
 from urllib.parse import urlparse, urljoin
 from flask_wtf import CSRFProtect   # import: active CSRF via Flask-WTF
-from forms import AddCourseForm, DeleteCourseForm, LoginForm, RegisterForm, AddChapterForm, RechercheForm
+from forms import AddCourseForm, DeleteCourseForm, LoginForm, RegisterForm, AddChapterForm, RechercheForm, DeleteChapitreForm
 from flask_wtf.csrf import CSRFError
 from werkzeug.utils import secure_filename
 
@@ -435,16 +435,24 @@ def modifier_cours(id_cours):
         return redirect(url_for('admin'))
     return render_template('insert_cours.html', form=form, edit=True, cours=cours) 
 
-@app.route('/cours/<int:id_cours>/chapitre/<int:id_chapitre>/supprimer', methods=['POST'])
+@app.route('/admin/supprimer_chapitre', methods=['POST'])
 @login_required
-def supprimer_chapitre(id_cours, id_chapitre):
+def supprimer_chapitre():
     if not current_user.is_admin: 
         abort(403)
-    db = get_db()
-    cours = db.get_cours_par_id(id_cours)
+    form = DeleteChapitreForm()
+    if form.validate_on_submit():
+        id_cours = int(form.id_cours.data)
+        id_chapitre = int(form.id_chapitre.data)
+    if not id_cours or not id_chapitre:
+        flash('Veuillez sélectionner un cours et un chapitre.', 'error')
+        return redirect(url_for('admin'))
+    
+    db = get_db() 
+    cours = db.get_cours_par_id(id_cours) 
     chapitre = db.get_chapitre_par_id(id_chapitre)
     documents = db.get_documents_par_chapitre(id_chapitre)
-    if not cours or not chapitre: 
+    if not chapitre or  chapitre['id_cours'] != id_cours: 
         abort(404)
     for doc in documents:
         file_path = os.path.join(app.root_path, doc['url_document'].lstrip('/')) # Chemin complet du fichier
@@ -460,7 +468,7 @@ def supprimer_chapitre(id_cours, id_chapitre):
 @app.route('/recherche', methods=['POST'])  
 @login_required
 def recherche():
-    form = RechercheForm() # crée le formulaire
+    form = RechercheForm() # crée le formulaire de recherche
     if form.validate_on_submit():
         recherche_term = form.recherche.data.strip()
         if not recherche_term:
