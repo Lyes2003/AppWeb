@@ -27,8 +27,8 @@ class AddCourseForm(FlaskForm):
     submit = SubmitField('Ajouter le cours') # Bouton de soumission
 
 # Formulaire pour admin pour supprimer un cours
-class DeleteCourseForm(FlaskForm):
-    cours_id = StringField('ID du cours', validators=[DataRequired()]) # ID du cours obligatoire
+class DeleteCoursForm(FlaskForm):
+    id_cours = StringField('ID du cours', validators=[DataRequired()]) # ID du cours obligatoire
     submit = SubmitField('Supprimer le cours') # Bouton de soumission
 
 # Formulaire pour admin pour ajouter un chapitre
