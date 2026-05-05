@@ -246,5 +246,12 @@ class Database:
         connection.execute(query, (document_id,))
         connection.commit()
         return True
+    
+    def count_documents_par_chapitre(self, chapitre_id):
+        cursor = self.get_connection().cursor()
+        query = ("select count(*) from documents where id_chapitre = ?")
+        cursor.execute(query, (chapitre_id,))
+        item = cursor.fetchone()
+        return item[0] if item else 0
 
 # End of database.py
