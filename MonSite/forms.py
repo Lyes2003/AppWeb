@@ -44,6 +44,10 @@ class DeleteChapitreForm(FlaskForm):
     id_cours = StringField('ID du cours', validators=[DataRequired()]) # ID du cours obligatoire
     submit = SubmitField('Supprimer le chapitre') # Bouton de soumission
 
+class DeleteDocumentForm(FlaskForm):
+    id_document = StringField('ID du document', validators=[DataRequired()]) # ID du document obligatoire
+    submit = SubmitField('Supprimer le document') # Bouton de soumission
+
 # Formulaire pour recherche de cours
 class RechercheForm(FlaskForm):
     recherche = StringField('Recherche', validators=[Length(max=100)], render_kw={"placeholder": "Entrez le nom du cours à rechercher"}) # Champ de recherche avec texte indicatif
