@@ -5,3 +5,6 @@ __pycache__/
 instance/
 venv/
 db/ 
+*.db
+uploads/
+config.py
