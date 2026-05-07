@@ -1,4 +1,4 @@
-# Copyright 2024 <Votre nom et code permanent>
+# Copyright 2024
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -22,15 +22,19 @@ from flask_login import LoginManager, UserMixin, login_user, logout_user, login_
 from datetime import timedelta
 from urllib.parse import urlparse, urljoin
 from flask_wtf import CSRFProtect   # import: active CSRF via Flask-WTF
-from forms import AddCourseForm, DeleteCoursForm, LoginForm, RegisterForm, AddChapterForm, RechercheForm, DeleteChapitreForm
+from forms import AddCourseForm, DeleteCoursForm, LoginForm, RegisterForm, AddChapterForm, RechercheForm, DeleteChapitreForm, DeleteDocumentForm
 from flask_wtf.csrf import CSRFError
 from werkzeug.utils import secure_filename
-
+from config import SECRET_KEY
 
 app = Flask(__name__, static_url_path="", static_folder="static")
 
 # Configuration de l'application Flask
-app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'change_me_secure_key') # clé secrète pour les sessions et CSRF
+app.config['SECRET_KEY'] = SECRET_KEY # clé secrète pour les sessions et CSRF
+
+if not app.config['SECRET_KEY']:
+    raise RuntimeError("Secret key est pas définie")
+
 csrf = CSRFProtect(app)  # active la protection CSRF pour l'application
 app.config['UPLOAD_FOLDER'] = os.path.join(app.root_path, 'uploads') # dossier PRIVÉ (je l'ai mis hors de static/) pour les fichiers PDF téléchargés par l'admin
 os.makedirs(app.config["UPLOAD_FOLDER"], exist_ok=True) # crée le dossier s'il n'existe pas
@@ -73,7 +77,6 @@ def get_db():
         g._database = Database()
     return g._database
 
-
 # fermeture de la connexion à la base de données après chaque requête
 @app.teardown_appcontext
 def close_connection(exception):
@@ -85,8 +88,6 @@ def close_connection(exception):
 @app.route('/', methods=['GET'])
 def page_acceuil():
     return render_template('index.html')
-
-
 # retourne à la page d'accueil après la déconnexion
 @app.route('/logout')
 @login_required
@@ -256,10 +257,17 @@ def admin():
     form = AddCourseForm()
     cours = db.get_cours()
     chapitres = db.get_chapitres()
+    documents = db.get_documents()
+
     # Calculer le nombre de chapitres pour chaque cours
     for c in cours:
         c['nbr_chapitres'] = db.count_chapitres_par_cours(c['id_cours']) # compte le nombre de chapitre par cours
-    return render_template('admin.html', form=form, cours=cours, chapitres=chapitres)
+
+    # Calculer le nombre de documents pour chaque chapitre
+    for chapt in chapitres:
+        chapt['nbr_documents'] = db.count_documents_par_chapitre(chapt['id_chapitre']) # compte le nombre de documents par chapitre
+
+    return render_template('admin.html', form=form, cours=cours, chapitres=chapitres, documents=documents)
 
 # route pour ajouter un cours ( seulement pour l'admin )
 # retourne à la page d'administration après l'ajout réussi d'un cours
@@ -385,6 +393,29 @@ def serve_document(id_document):
         mimetype='application/pdf'
     )
 
+@app.route('/admin/supprimer_document', methods=['POST'])
+@login_required
+def supprimer_document():
+    if not current_user.is_admin:
+        abort(403)
+    form = DeleteDocumentForm()
+    if form.validate_on_submit():
+        id_document = int(form.id_document.data)
+        # Récupérer le document depuis la base de données
+        db = get_db()
+        document = db.get_document(id_document)
+        if document:
+            # Supprimer le fichier du serveur
+            file_path = os.path.join(app.root_path, document['url_document'].lstrip('/'))
+            if os.path.exists(file_path):
+                os.remove(file_path)
+            # Supprimer le document de la base de données
+            db.delete_document(id_document)
+            flash('Document supprimé avec succès.', 'success')
+        else:
+            flash('Document non trouvé.', 'error')
+    return redirect(url_for('admin'))
+
 # route pour supprimer un cours ( seulement pour l'admin MOI ! )
 # supprime aussi tous les chapitres, documents et fichiers associés (suppression récursive)
 # retourne à la page d'administration après la suppression réussie d'un cours
@@ -453,6 +484,9 @@ def supprimer_chapitre():
     if not current_user.is_admin: 
         abort(403)
     form = DeleteChapitreForm()
+    id_cours = None # initier l'id du cours pour eviter les erreurs de validation
+    id_chapitre = None # 
+
     if form.validate_on_submit():
         id_cours = int(form.id_cours.data)
         id_chapitre = int(form.id_chapitre.data)
@@ -498,4 +532,4 @@ def recherche():
 
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(debug=True, port=5001)
