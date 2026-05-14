@@ -17,15 +17,16 @@ import re
 import os
 from flask import Flask, url_for, render_template, g, request, redirect, session, flash, abort, send_file
 from database import Database
-from werkzeug.security import generate_password_hash, check_password_hash
 from flask_login import LoginManager, UserMixin, login_user, logout_user, login_required, current_user
 from datetime import timedelta
 from urllib.parse import urlparse, urljoin
 from flask_wtf import CSRFProtect   # import: active CSRF via Flask-WTF
-from forms import AddCourseForm, DeleteCoursForm, LoginForm, RegisterForm, AddChapterForm, RechercheForm, DeleteChapitreForm, DeleteDocumentForm
+from forms import AddCourseForm, DeleteCoursForm, AddChapterForm, RechercheForm, DeleteChapitreForm, DeleteDocumentForm
 from flask_wtf.csrf import CSRFError
 from werkzeug.utils import secure_filename
 from config import SECRET_KEY
+from auth.routes import auth
+from utils import get_db, User, is_safe_url, is_valid_email, is_valid_name, is_strong_password
 
 app = Flask(__name__, static_url_path="", static_folder="static")
 
@@ -49,15 +50,10 @@ app.config['SESSION_COOKIE_SAMESITE'] = 'Lax' # Protège contre les attaques CSR
 # --- Flask-Login setup ---
 login_manager = LoginManager()
 login_manager.init_app(app)
-login_manager.login_view = 'login'
+login_manager.login_view = 'auth.login' # la redirection si l'utilisateur n'est pas connecté ou n'a pas les droits nécessaires
 
-#--- User class pour Flask-Login ---
-class User(UserMixin):
-    def __init__(self, id_utilisateur, nom, courriel, is_admin=False):
-        self.id = id_utilisateur
-        self.nom = nom
-        self.courriel = courriel
-        self.is_admin = is_admin 
+app.register_blueprint(auth, url_prefix='/auth') # enregistrer le blueprint
+
 
 # Flask-Login user loader
 @login_manager.user_loader
@@ -69,13 +65,6 @@ def load_user(user_id):
         is_admin = utilisateur.get('is_admin', False)
         return User(utilisateur['id_utilisateur'], utilisateur['nom'], utilisateur['courriel'], is_admin)
     return None
-
-# Database connection management
-def get_db():
-    db = getattr(g, '_database', None)
-    if db is None:
-        g._database = Database()
-    return g._database
 
 # fermeture de la connexion à la base de données après chaque requête
 @app.teardown_appcontext
@@ -95,61 +84,6 @@ def logout():
     logout_user()
     return redirect(url_for('page_acceuil'))
 
-# Route pour une page protégée
-# retourne un message avec le nom de l'utilisateur connecté
-@app.route('/protected')
-@login_required 
-def protected():
-    return f"Bonjour {current_user.nom} — page protégée"
-
-# Fonction pour vérifier si une URL est sûre
-# retourne True si l'URL est sûre, False sinon
-def is_safe_url(target):
-    if not target:
-        return False
-    host_url = request.host_url # Obtenir l'URL de l'hôte
-    ref_url = urlparse(host_url) # Analyser l'URL de l'hôte
-    test_url = urlparse(urljoin(host_url, target)) # Joindre l'URL de l'hôte avec la cible 
-    return test_url.scheme in ('http', 'https') and ref_url.netloc == test_url.netloc # Vérifier que le netloc correspond
-
-# --- Validation utilities ---
-EMAIL_REGEX = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
-NAME_REGEX = re.compile(r"^[A-Za-zÀ-ÖØ-öø-ÿ' \-]{2,100}$")
-
-# Vérifie si le courriel est valide
-# retourne True si le courriel est valide, False sinon
-def is_valid_email(email: str) -> bool:
-    #Retourne True si le courriel a un format plausible.
-    if not email:
-        return False
-    return bool(EMAIL_REGEX.match(email))
-
-# Vérifie si le nom est valide (lettres, espaces, apostrophes, traits d'union)
-# retourne True si le nom est valide, False sinon
-def is_valid_name(name: str) -> bool:
-    #Retourne True si le nom contient uniquement des lettres, espaces, apostrophes ou traits d'union (2-25 chars).
-    if not name:
-        return False
-    return bool(NAME_REGEX.match(name.strip()))
-
-# Vérifie la robustesse du mot de passe
-# retourne (True, None) si le mot de passe est fort, sinon (False, message)
-def is_strong_password(pw: str):
-    #Vérifie la robustesse du mot de passe. Retourne (True, None) ou (False, message).
-    if pw is None:
-        return False, "Mot de passe manquant."
-    if len(pw) < 8:
-        return False, "Le mot de passe doit contenir au moins 8 caractères."
-    if not re.search(r"[a-z]", pw):
-        return False, "Le mot de passe doit contenir au moins une lettre minuscule."
-    if not re.search(r"[A-Z]", pw):
-        return False, "Le mot de passe doit contenir au moins une lettre majuscule."
-    if not re.search(r"\d", pw):
-        return False, "Le mot de passe doit contenir au moins un chiffre."
-    if not re.search(r"[!@#$%^&*()_+\-\=\[\]{};':\"\\|,.<>\/?`~]", pw):
-        return False, "Le mot de passe doit contenir au moins un caractère spécial."
-    return True, None
-
 # Route pour le tableau de bord utilisateur
 # retourne la page du tableau de bord avec le nom de l'utilisateur connecté
 @app.route('/dashboard')
@@ -160,82 +94,6 @@ def dashboard():
     cours = db.get_cours()
     cours_aleatoire = random.sample(cours, min(9, len(cours))) # Sélectionne jusqu'à 9 cours aléatoires
     return render_template('dashboard.html', nom=current_user.nom, cours=cours_aleatoire, form=form)
-
-# Route pour la page d'inscription
-# retourne à la page d'accueil après une inscription réussie, sinon reste sur la page d'inscription avec un message d'erreur
-@app.route('/inscription', methods=['GET', 'POST'])
-def inscription():
-    form = RegisterForm()
-    # Vérifier si le formulaire (POST) est soumis et valide
-    if form.validate_on_submit(): # retourne si le form a ete soumis et valide (POST + token CSRF + validators)
-        # Récupérer les données du formulaire
-        nom = form.nom.data.strip()
-        courriel = form.courriel.data.strip()
-        mot_de_passe = form.mot_de_passe.data
-        mot_de_passe_confirm = form.mot_de_passe_confirm.data
-
-        # validations côté serveur
-        valid = True
-        if not is_valid_name(nom):
-            form.nom.errors.append("Nom invalide — utilisez lettres, espaces, apostrophes ou traits d'union (2-25 caractères).")
-            valid = False
-        if not is_valid_email(courriel):
-            form.courriel.errors.append("Courriel invalide.")
-            valid = False
-        ok, msg = is_strong_password(mot_de_passe)
-        if not ok:
-            form.mot_de_passe.errors.append(msg)
-            valid = False
-        if mot_de_passe != mot_de_passe_confirm:
-            form.mot_de_passe_confirm.errors.append("Les mots de passe ne correspondent pas.")
-            valid = False
-        if not valid:
-            return render_template('register.html', form=form)
-
-        # Vérifier si un utilisateur avec le même courriel existe déjà
-        db = get_db()
-        existing = db.get_utilisateur_par_courriel(courriel)
-        if existing:
-            form.courriel.errors.append("Un compte existe déjà pour ce courriel.")
-            return render_template('register.html', form=form) 
-
-        hashed = generate_password_hash(mot_de_passe)
-        # Insérer le nouvel utilisateur dans la base de données
-        id = db.insert_utilisateur(nom, courriel, hashed)
-        return redirect(url_for('page_acceuil'))
-    else:
-        return render_template('register.html', form=form)
-
-# Route pour la page de connexion
-# retourne à la page d'accueil après une connexion réussie, sinon reste sur la page de connexion avec un message d'erreur
-@app.route('/login', methods=['GET', 'POST'])
-def login():
-    form = LoginForm()
-    if form.validate_on_submit():   # vérifie POST + token CSRF + validators
-        # validations structurelles
-        if not is_valid_email(form.courriel.data.strip()):
-            form.courriel.errors.append("Courriel invalide.")
-            return render_template('login.html', form=form)
-        # Récupérer les données du formulaire
-        courriel = form.courriel.data.strip()
-        mot_de_passe = form.mot_de_passe.data.strip()
-        db = get_db()
-        utilisateur = db.get_utilisateur_par_courriel(courriel)
-        # Vérifier si l'utilisateur existe et si le mot de passe est correct
-        if utilisateur and check_password_hash(utilisateur['mot_de_passe'], mot_de_passe):
-            user_obj = User(utilisateur['id_utilisateur'], utilisateur['nom'], utilisateur['courriel'], utilisateur['is_admin'])
-            # Connecter l'utilisateur et gérer la session 
-            login_user(user_obj, remember=form.remember.data)
-            # Rediriger vers la page suivante ou la page d'accueil
-            next_page = request.args.get('next') 
-            if next_page and is_safe_url(next_page):
-                return redirect(next_page)
-            return redirect(url_for('page_acceuil'))
-        else:
-            form.mot_de_passe.errors.append("Courriel ou mot de passe incorrect.")
-            return render_template('login.html', form=form)
-    else:
-        return render_template('login.html', form=form)
 
 # Gestion des erreurs CSRF
 @app.errorhandler(CSRFError) # appelle cette fonction en cas d'erreur CSRF
