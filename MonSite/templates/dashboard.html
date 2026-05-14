@@ -22,7 +22,7 @@
         {% if query %}
             {% for result in results %}
                 <div class="cours">
-                    <h3><a href="{{ url_for('cours_detail', id_cours=result['id_cours']) }}">{{ result['nom_cours'] }}</a></h3>
+                    <h3><a href="{{ url_for('admin.cours_detail', id_cours=result['id_cours']) }}">{{ result['nom_cours'] }}</a></h3>
                     <p>{{ result['description'] }}</p>
                 </div>
             {% endfor %}
@@ -32,7 +32,7 @@
         {% else %}
             {% for cours in cours %}
                 <div class="cours">
-                    <h3><a href="{{ url_for('cours_detail', id_cours=cours['id_cours']) }}">{{ cours['nom_cours'] }}</a></h3>
+                    <h3><a href="{{ url_for('admin.cours_detail', id_cours=cours['id_cours']) }}">{{ cours['nom_cours'] }}</a></h3>
                     <p>{{ cours['description'] }}</p>
                 </div>
             {% endfor %}
