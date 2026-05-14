@@ -7,7 +7,7 @@
 </head>
 <body>
     <h1>Login</h1>
-    <form method="post" action="{{ url_for('login') }}">
+    <form method="post" action="{{ url_for('auth.login') }}">
         {{ form.hidden_tag() }}   <!-- insère le champ csrf_token caché -->
         <label for="courriel">Courriel:</label>
         {{ form.courriel() }}<br><br>
@@ -24,7 +24,7 @@
     {% if error %}
         <p style="color: red;">{{ error }}</p>
     {% endif %}    
-    <p>Pas de compte ? <a href="{{ url_for('inscription') }}">S'inscrire</a></p>
+    <p>Pas de compte ? <a href="{{ url_for('auth.register') }}">S'inscrire</a></p>
 
    {% if form.errors %}
   <ul class="errors">

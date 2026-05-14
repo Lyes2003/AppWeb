@@ -7,7 +7,7 @@
 </head>
 <body>
     <h1>Enregistrement</h1>
-    <form action="{{ url_for('inscription') }}" method="post">
+    <form action="{{ url_for('auth.register') }}" method="post">
         {{ form.hidden_tag() }}  <!-- insère le champ csrf_token caché -->
         <label for="nom">Nom:</label>
         {{ form.nom() }}<br><br>
