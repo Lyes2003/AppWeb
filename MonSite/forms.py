@@ -21,7 +21,7 @@ class RegisterForm(FlaskForm):
     submit = SubmitField("S'enregistrer") # Bouton de soumission
 
 # Formulaire pour admin pour ajouter un cours
-class AddCourseForm(FlaskForm):
+class AddCoursForm(FlaskForm):
     nom_cours = StringField('Nom du cours', validators=[DataRequired(), Length(max=100)]) # Nom du cours limité à 100 caractères
     description = StringField('Description', validators=[DataRequired(), Length(max=255)]) # Description limitée à 255 caractères
     submit = SubmitField('Ajouter le cours') # Bouton de soumission
