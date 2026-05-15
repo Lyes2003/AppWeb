@@ -4,7 +4,7 @@ from flask_login import login_user, login_required, current_user
 from utils import get_db, User, is_safe_url
 from forms import AddCoursForm, DeleteCoursForm, AddChapterForm, RechercheForm, DeleteChapitreForm, DeleteDocumentForm
 
-managcours = Blueprint('cours', __name__)
+managcours = Blueprint('managcours', __name__)
 
 # route pour ajouter un cours ( seulement pour l'admin )
 # retourne à la page d'administration après l'ajout réussi d'un cours
@@ -51,7 +51,7 @@ def modifier_cours(id_cours):
         nom_cours = form.nom_cours.data.strip()
         description = form.description.data.strip()
         db.modify_cours(id_cours, nom_cours, description)
-        flash(f'Cours modifié avec succès.', 'success')
+        flash(f'Cours "{nom_cours}" modifié avec succès.', 'success')
         return redirect(url_for('admin'))
     return render_template('insert_cours.html', form=form, edit=True, cours=cours) 
 
