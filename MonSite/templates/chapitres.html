@@ -10,11 +10,11 @@
     <ul>
         {% for chapitre in chapitres %}
         <div>   
-            <h3><a href="{{ url_for('chapitre_detail',id_cours=id_cours, id_chapitre=chapitre['id_chapitre']) }}">{{ chapitre['titre'] }}</a></h3>
+            <h3><a href="{{ url_for('managchapters.chapitre_detail',id_cours=id_cours, id_chapitre=chapitre['id_chapitre']) }}">{{ chapitre['titre'] }}</a></h3>
             <p>{{ chapitre['contenu'] }}</p>
         </div>          
         {% endfor %}
     </ul>
-    <a href="{{ url_for('admin.cours_detail', id_cours=id_cours) }}">Retour au cours</a>
+    <a href="{{ url_for('managcours.cours_detail', id_cours=id_cours) }}">Retour au cours</a>
 </body>
 </html>

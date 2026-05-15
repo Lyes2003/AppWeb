@@ -11,7 +11,7 @@
     <ul>
         {% for chapitre in chapitres %}
             <li>
-                <a href="{{ url_for('chapitre_detail', id_cours=cours['id_cours'], id_chapitre=chapitre['id_chapitre']) }}">
+                <a href="{{ url_for('managchapters.chapitre_detail', id_cours=cours['id_cours'], id_chapitre=chapitre['id_chapitre']) }}">
                     {{ chapitre['titre'] }}
                 </a>
             </li>
