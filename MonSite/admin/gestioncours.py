@@ -4,11 +4,11 @@ from flask_login import login_user, login_required, current_user
 from utils import get_db, User, is_safe_url
 from forms import AddCoursForm, DeleteCoursForm, AddChapterForm, RechercheForm, DeleteChapitreForm, DeleteDocumentForm
 
-admin = Blueprint('admin', __name__)
+managcours = Blueprint('cours', __name__)
 
 # route pour ajouter un cours ( seulement pour l'admin )
 # retourne à la page d'administration après l'ajout réussi d'un cours
-@admin.route('/Ajouter_Cours', methods=['GET', 'POST'])
+@managcours.route('/Ajouter_Cours', methods=['GET', 'POST'])
 @login_required
 def add_cours():
     if not current_user.is_admin:
@@ -25,7 +25,7 @@ def add_cours():
 
 # Route pour afficher les détails d'un cours
 # retourne la page de détails du cours spécifié par son ID
-@admin.route('/cours/<int:id_cours>')
+@managcours.route('/cours/<int:id_cours>')
 @login_required
 def cours_detail(id_cours):
     db = get_db()
@@ -37,7 +37,7 @@ def cours_detail(id_cours):
 
 # route pour modifier un cours ( seulement pour l'admin )
 # retourne à la page d'administration après la modification réussie d'un cours
-@admin.route('/modifier_cours/<int:id_cours>', methods=['GET', 'POST'])
+@managcours.route('/modifier_cours/<int:id_cours>', methods=['GET', 'POST'])
 @login_required
 def modifier_cours(id_cours):
     if not current_user.is_admin:
@@ -58,7 +58,7 @@ def modifier_cours(id_cours):
 # route pour supprimer un cours ( seulement pour l'admin MOI ! )
 # supprime aussi tous les chapitres, documents et fichiers associés (suppression récursive)
 # retourne à la page d'administration après la suppression réussie d'un cours
-@admin.route('/supprimer_cours', methods=['POST'])
+@managcours.route('/supprimer_cours', methods=['POST'])
 @login_required
 def supprimer_cours():
     if not current_user.is_admin:
