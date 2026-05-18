@@ -4,6 +4,7 @@ from flask_login import UserMixin, login_user
 from database import Database
 from urllib.parse import urlparse, urljoin
 from flask import request
+from urllib.parse import urlparse, urljoin
 
 #--- User class pour Flask-Login ---
 class User(UserMixin):
