@@ -10,7 +10,7 @@ import random
 managchapters =  Blueprint('managchapters', __name__)
 
 
-# route pour ajouter un chapitre
+# route pour ajouter un chapitre et des documents
 # retourne la page des chapitres
 @managchapters.route('/cours/<int:id_cours>/chapitre/ajouter', methods=['GET', 'POST'])
 @login_required
