@@ -76,7 +76,7 @@
                     
                     <!-- Ajouter/Supprimer le document sélectionné -->
                     <td>
-                        <form method="post" action="{{ url_for('supprimer_document') }}" style="display:inline;">
+                        <form method="post" action="{{ url_for('managdocuments.supprimer_document') }}" style="display:inline;">
                             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
                             <select class="doc-select" id="document-{{ cours['id_cours'] }}" name="id_document">
                                 <option value="" selected>Choisir un fichier</option>

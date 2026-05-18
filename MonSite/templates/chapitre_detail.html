@@ -16,7 +16,7 @@
                 <h3>{{ document['nom_document'] }}</h3>
                 <div id="doc-{{ document['id_document'] }}" class="hidden" style="margin-top:0.5rem;">
                     <div class="viewer-container">
-                        <iframe src="{{ url_for('serve_document', id_document=document['id_document']) }}" width="100%" height="100%" style="border:0;" title="{{ document['nom_document'] }}"></iframe>
+                        <iframe src="{{ url_for('managdocuments.serve_document', id_document=document['id_document']) }}" width="100%" height="100%" style="border:0;" title="{{ document['nom_document'] }}"></iframe>
                     </div>
                 </div>
             </div>
