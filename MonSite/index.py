@@ -19,9 +19,8 @@ from flask import Flask, url_for, render_template, g, request, redirect, session
 from database import Database
 from flask_login import LoginManager, UserMixin, login_user, logout_user, login_required, current_user
 from datetime import timedelta
-from urllib.parse import urlparse, urljoin
 from flask_wtf import CSRFProtect   # import: active CSRF via Flask-WTF
-from forms import AddCoursForm, AddChapterForm, RechercheForm, DeleteChapitreForm, DeleteDocumentForm
+from forms import RechercheForm, DeleteDocumentForm, AddCoursForm
 from flask_wtf.csrf import CSRFError
 from werkzeug.utils import secure_filename
 from config import SECRET_KEY
