@@ -1,8 +1,10 @@
-from flask import render_template, url_for, redirect, request, flash, abort
+from flask import render_template, url_for, redirect, request, flash, abort, current_app
 from flask import Blueprint
 from flask_login import login_user, login_required, current_user
 from utils import get_db, User, is_safe_url
-from forms import AddCoursForm, DeleteCoursForm, AddChapterForm, RechercheForm, DeleteChapitreForm, DeleteDocumentForm
+from forms import AddCoursForm, DeleteCoursForm
+import os, random
+from werkzeug.utils import secure_filename
 
 managcours = Blueprint('managcours', __name__)
 
@@ -85,7 +87,7 @@ def supprimer_cours():
         documents = db.get_documents_par_chapitre(chapitre['id_chapitre'])
         # Supprimer les fichiers PDF du serveur
         for doc in documents:
-            file_path = os.path.join(app.root_path, doc['url_document'].lstrip('/')) # Chemin complet du fichier
+            file_path = os.path.join(current_app.root_path, doc['url_document'].lstrip('/')) # Chemin complet du fichier
             if os.path.exists(file_path):
                 os.remove(file_path)  # Supprime le fichier du serveur
             db.delete_document(doc['id_document'])  # Supprime le document de la BDD
