@@ -19,15 +19,14 @@
     document.querySelectorAll('.chapter-select').forEach(select => {
     const courseId = select.id.replace('chapter-', '');
     const countSpan = document.getElementById(`doc-count-${courseId}`); // Récupère le span pour le compteur de documents
-    const docSelect = document.getElementById(`doc-select-${courseId}`); // Récupère le select pour les documents
+    const docSelect = document.getElementById(`document-${courseId}`); // Récupère le select pour les documents
 
     // Fonction pour mettre à jour les options du select des documents
     function update(chapitreId) {
         const docs = docsByChapter[chapitreId] || [];
         countSpan.textContent = docs.length; // Met à jour le compteur de documents
-        docSelect.innerHTML = docs // Met à jour la liste des documents
-        .map(d => `<option value="${d.id_document}">${d.nom_document}</option>`) // Crée les options pour chaque document
-        .join(''); // Joint les options en une seule chaîne pour assembler toutes les options en un bloc HTML
+        docSelect.innerHTML = `<option value="" selected>Choisir un fichier</option>` +
+            docs.map(d => `<option value="${d.id_document}">${d.nom_document}</option>`).join(''); // Met à jour les options du select par rapport au chapitre sélectionné
     }
 
     select.addEventListener('change', () => update(select.value));
