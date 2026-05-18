@@ -1,8 +1,11 @@
-from flask import render_template, url_for, redirect, request, flash, abort
+from flask import render_template, url_for, redirect, request, flash, abort, current_app
 from flask import Blueprint
 from flask_login import login_user, login_required, current_user
+from werkzeug.utils import secure_filename
 from utils import get_db, User, is_safe_url
-from forms import AddCoursForm, DeleteCoursForm, AddChapterForm, RechercheForm, DeleteChapitreForm, DeleteDocumentForm
+from forms import AddChapterForm, DeleteChapitreForm
+import os
+import random
 
 managchapters =  Blueprint('managchapters', __name__)
 
@@ -26,17 +29,18 @@ def ajouter_chapitre(id_cours):
         # Gérer le téléchargement du fichier PDF
         if form.pdf.data: # un fichier a été téléchargé
             pdf_file = form.pdf.data
-            filename = secure_filename(pdf_file.filename) # sécurise le nom du fichier
-            unique_name = f"random_{random.randint(100000, 999999)}_{filename}" # nom unique pour éviter les collisions 
-            file_path = os.path.join(app.config['UPLOAD_FOLDER'], unique_name) # chemin complet du fichier
-            pdf_file.save(file_path) # sauvegarde le fichier sur le serveur
-            # Stocker le chemin relatif 
-            url_document = f"uploads/{unique_name}"
-            # Enregistrer le document dans la base de données
-            db.insert_document(id_chapitre, filename, url_document, 'pdf') 
+            if pdf_file.filename: # s'assurer qu'un fichier a été sélectionné
+                filename = secure_filename(pdf_file.filename) # sécurise le nom du fichier
+                unique_name = f"random_{random.randint(100000, 999999)}_{filename}" # nom unique pour éviter les collisions 
+                file_path = os.path.join(current_app.config['UPLOAD_FOLDER'], unique_name) # chemin complet du fichier
+                pdf_file.save(file_path) # sauvegarde le fichier sur le serveur
+                # Stocker le chemin relatif 
+                url_document = f"uploads/{unique_name}"
+                # Enregistrer le document dans la base de données
+                db.insert_document(id_chapitre, filename, url_document, 'pdf') 
 
         flash(f'Le chapitre "{nom_chapitre}" a été ajouté avec succès.', 'success')
-        return redirect(url_for('chapitres_cours', id_cours=id_cours))
+        return redirect(url_for('managchapters.chapitres_cours', id_cours=id_cours))
     return render_template('insert_chapitre.html', form=form, id_cours=id_cours)
 
 
@@ -79,7 +83,7 @@ def supprimer_chapitre():
 
     # supprimer les fichires PDF du serveur
     for doc in documents:
-        file_path = os.path.join(app.root_path, doc['url_document'].lstrip('/')) # Chemin complet du fichier
+        file_path = os.path.join(current_app.root_path, doc['url_document'].lstrip('/')) # Chemin complet du fichier
         if os.path.exists(file_path):
             os.remove(file_path)  # Supprime le fichier du serveur
         db.delete_document(doc['id_document'])  # Supprime le document de la BDD
